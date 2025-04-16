@@ -1,0 +1,16 @@
+Version: 1.0
+ProjectId: ae29c5b1-4584-4c85-a4a7-7213c3bcf4aa
+
+RestoreWorkspace: Default
+SaveWorkspace: Default
+AlwaysSaveHistory: Default
+
+EnableCodeIndexing: Yes
+UseSpacesForTab: Yes
+NumSpacesForTab: 2
+Encoding: UTF-8
+
+RnwWeave: Sweave
+LaTeX: pdfLaTeX
+
+ProjectName: Estudio_de_Caso2
