@@ -1,0 +1,170 @@
+---
+title: "Declaratorias"
+author: "Ana C. Bardomiano Martínez-Norman Roberto Sanchéz Rojano"
+date: "2025-04-05"
+output: pdf_document
+---
+
+**Introducción**
+
+La gestión de riesgos y desastres en México sigue siendo un reto a trabajar, ya que varias regiones del país constantemente presentan daños derivados de fenómenos naturales como sismos, inundaciones, deslaves, etc. Por ello, el Centro Nacional de Riesgos (CENAPRED) tiene la tarea de gestionar, reducir y controlar el riesgo de desastres y atender las emergencias con base en estrategias centralizadas y reactivas. (CENAPRED, s.f.)
+
+Cuando se habla de desastres se entiende como la presencia de perturbaciones o daños en el funcionamiento de un área que excedan su capacidad de respuesta para hacer frente a tal evento (IFRC, s.f.) mientras que emergencia se trata de pérdidas menores que requieren atenderse inmediatamente. (SAV DGPC, 2015)
+
+En ese contexto Chiapas, al encontrarse en una zona donde convergen las placas de Cocos, Norteamericana y del Caribe, complementado con la humedad de los océanos Pacífico y Atlántico que llegan al territorio resulta en un área en situación de riesgo y vulnerabilidad por diversos fenómenos naturales. (Desastres, s. f.) Esta preocupación llevó a la creación del Fondo de Prevención de Desastres Naturales (FONDEN) a fin de atender de manera oportuna los daños provocados por dichos fenómenos en la región. (SH, 2001), además, se trabaja de manera conjunta con la Secretaría de Protección Civil de Chiapas, el Instituto para la Gestión Integral de Riesgos de Desastres del Estado de Chiapas, entre otros, para el monitoreo y respuesta ante emergencias y desastres.
+
+**Justificación**
+
+La base usada se toma de la plataforma del *Atlas Nacional de Riesgos* a través del link: <http://www.atlasnacionalderiesgos.gob.mx/archivo/descargas.html> en ella se eligió la base de datos sobre declaratorias de emergencia, desastre y contingencia climatológica de los años 2000 a 2024 con el fin de realizar un análisis de qué fenómenos naturales son los que resultan en eventos desastroso o de emergencia para informar de manera fácil y clara a la población sobre los riesgos que estos eventos pueden llegar a provocar y con ello para contribuir a la cultura de la prevención en dicho estado.
+
+Para delimitar el estudio de caso, se elige el estado de Chiapas debido a su ubicación geográfica, considerada vulnerable, la cual ha sido una de las razones para que sea azotada por diversos fenómenos naturales. Además, debido a la diversidad de información encontrada dentro de la base de datos, se considera que la cantidad de observaciones son adecuadas para realizar el modelo.
+
+**Pregunta de investigación**
+
+¿Qué evento (lluvias, sequías, inundaciones, sismos, etc.) tiene mayor probabilidad de ser declarado como emergencia o desastre en el estado de Chiapas?
+
+**Modelo y variables**
+
+Para realizar el análisis, se utilizó el *modelo multinomial de regresión logística* ya que se trabajó con datos categóricos de varias variables.
+
+Con ello se consideraron las variables: declaratoria con opciones desastre, emergencia, y contingencia climatológica; tipo de fenómeno, sismo, inundaciones, sequías. Tomando a “declaratoria” como variable dependiente y “tipo de fenómeno” como variable independiente para realizar el modelo, ya que estas variables son las que responden a la pregunta de investigación planteada anteriormente.
+
+Se instalan y llaman los paquetes necesarios para usar el modelo
+
+```{r}
+install.packages("dplyr") #RLM, filtrar y transformar datos
+install.packages("nnet") #Manipulación de datos
+install.packages("broom") #orden de datos de manera estética
+install.packages("kableExtra") #tablas bonitas
+install.packages("gtsummary") #resúmenes
+install.packages("ggeffects") #visualización de modelos
+```
+
+```{r}
+#Se llaman los paquetes a utilizar
+library(nnet)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(broom)
+library(knitr)
+library(kableExtra)
+library(gtsummary)
+library(ggeffects)
+```
+
+Se inicia con la manipulación de datos para obtener solo la información relevante para el modelo.
+
+```{r}
+#creación de un objeto que contendrá la información sobre 
+#declaratorias
+#library(readr)
+#declaratorias <- read_csv("D:/Analisis_Modelacion/Caso de #Estudio/declaratorias.csv")
+#View(declaratorias)
+
+library(readr)
+declaratorias <- read_csv("declaratorias.csv")
+View(declaratorias)
+```
+
+```{r}
+#Se filtran los datos de interés, en este caso, CDMX. 
+#uso del carácter %>% para concatenar datos categóricos
+chiapas_datos <- declaratorias %>%
+  filter((Estado) == "Chiapas")
+```
+
+```{r}
+#Creación del objeto para realizar el modelo
+chiapas_modelo <- chiapas_datos %>%
+  #Se filtra la variable asignando los tipos de fenómenos de interés
+  filter(`Tipo Fenómeno` == c("Ciclón Tropical", "Lluvias", "Incendio Forestal", "Sequía", "Inundación", "Nevadas, Heladas, Granizadas", "Sismo", "Tornado", "Deslizamiento", "Heladas", "Temperatura Extrema", "Deslave", "Incendio Forestal", "Lluvias, Ciclón Tropical", "Tornado"
+)) %>%
+  mutate( #modificar los datos dentro de las columnas
+    tipo_fenomeno = as.factor(`Tipo Fenómeno`), #cambio a factor para el análisis categórico
+    tipo_declaratoria = as.factor(`Tipo Declaratoria`)
+  ) %>%
+  select(tipo_fenomeno, tipo_declaratoria) #se selecciona sólo estas variables de interés
+```
+
+Se realiza el modelo de regresión logística multinomial
+
+```{r}
+modelo <- multinom(tipo_declaratoria ~ tipo_fenomeno, data = chiapas_modelo)
+summary (modelo)
+```
+
+```{r}
+tidy(modelo) %>%
+  kable() %>%
+  kable_styling("basic", full_width = FALSE)
+```
+
+```{r}
+#análisis de probabilidades para las observaciones anteriores
+predicciones <- predict(modelo, type = "probs") 
+head(predicciones)
+```
+
+```{r}
+chiapas_modelo$predicho <- predict(modelo) #probabilidad de cada tipo de declaratoria para cada observación.
+table(chiapas_modelo$tipo_fenomeno, chiapas_modelo$predicho) #asociación del tipo de cuantas veces el fenómeno se asoció al tipo de declaratoia (desastre, emergencia) en la predicción 
+```
+
+Saber la significancia
+
+```{r}
+# Obtener z-scores
+z <- summary(modelo)$coefficients / summary(modelo)$standard.errors
+
+# Obtener p-values (dos colas)
+p_values <- 2 * (1 - pnorm(abs(z)))
+
+# Revisar
+round(p_values, 4)
+```
+
+Gráfico
+
+```{r}
+
+# Paso 1: Agrega las predicciones al data frame original
+chiapas_modelo$prob_desastre <- predict(modelo, type = "probs")[, "Desastre"]
+chiapas_modelo$prob_emergencia <- predict(modelo, type = "probs")[, "Emergencia"]
+
+# Paso 2: Calcula el promedio de probabilidades por tipo de fenómeno
+promedios <- chiapas_modelo %>%
+  group_by(tipo_fenomeno) %>%
+  summarise(
+    Desastre = mean(prob_desastre, na.rm = TRUE),
+    Emergencia = mean(prob_emergencia, na.rm = TRUE)
+  ) %>%
+  pivot_longer(cols = c("Desastre", "Emergencia"),
+               names_to = "tipo_declaratoria",
+               values_to = "probabilidad")
+
+# Paso 3: Gráfica de barras apiladas
+ggplot(promedios, aes(x = tipo_fenomeno, y = probabilidad, fill = tipo_declaratoria)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(values = c("Desastre" = "#d73027", "Emergencia" = "#4575b4")) +
+  labs(title = "Probabilidad promedio de declaratoria por tipo de fenómeno en Chiapas",
+       x = "Tipo de fenómeno",
+       y = "Probabilidad promedio",
+       fill = "Tipo de declaratoria") +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        plot.title = element_text(face = "bold", hjust = 0.5))
+```
+
+**Interpretación**
+
+la mayoría de los fenómenos sí están asociados de forma estadísticamente significativa con el tipo de declaratoria (emergencia o desastre), a excepción de "Lluvia" cuyo p value fue mayor a 0.05. Además que por falta de datos no se puede predecir de buena manera los fenómenos clasificados como "Sequías".
+
+El ajuste del modelo fue adecuado, como se refleja en su convergencia tras 30 iteraciones, una devianza residual de 196.407 y un AIC de 232.407, lo que sugiere una buena capacidad explicativa sin sobreajuste.
+
+Los resultados muestran una fuerte asociación entre ciertos fenómenos y las categorías de declaratoria. Por ejemplo, el fenómeno de sismo presenta coeficientes altamente positivos tanto para "Desastre" (21.29) como para "Emergencia" (20.68), indicando que la ocurrencia de un sismo se asocia de forma significativa con la emisión de alguna de estas dos declaratorias. En contraste, la sequía mostró coeficientes muy negativos (≈ -46), especialmente hacia "Emergencia", lo que sugiere una baja probabilidad de generar esa categoría de respuesta.
+
+Ciertos fenómenos, como deslizamientos y temperaturas extremas también mostraron asociaciones claras, los primeros se relacionan principalmente con "Emergencia", mientras que las segundas se vinculan casi exclusivamente con "Emergencia", mostrando incluso un coeficiente negativo para "Desastre". Por otro lado, las lluvias están significativamente relacionadas con la categoría "Desastre", lo cual se confirma al observar que en los datos observados se registraron 51 declaratorias de desastre para lluvias.
+
+La tabla de frecuencias observadas también apoya los hallazgos del modelo: los ciclones tropicales, sismos e inundaciones se vinculan exclusivamente con emergencias, mientras que la sequía se relaciona con desastres y no con emergencias.
